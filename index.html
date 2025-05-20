@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MBTI职业性格测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF9AA2',
+                        secondary: '#FFB7B2',
+                        tertiary: '#FFDAC1',
+                        accent: '#E2F0CB',
+                        neutral: '#B5EAD7',
+                        background: '#C7CEEA',
+                        e: '#FF9AA2', // 外倾
+                        i: '#B5EAD7', // 内倾
+                        s: '#FFB7B2', // 感觉
+                        n: '#E2F0CB', // 直觉
+                        t: '#FFDAC1', // 思维
+                        f: '#C7CEEA', // 情感
+                        j: '#FF9AA2', // 判断
+                        p: '#B5EAD7', // 知觉
+                    },
+                    fontFamily: {
+                        title: ['"Comic Sans MS"', '"华文彩云"', 'cursive'],
+                        body: ['"微软雅黑"', '"幼圆"', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+
+            .bg-glass {
+                background: rgba(255, 255, 255, 0.7);
+                backdrop-filter: blur(10px);
+            }
+
+            .btn-hover {
+                transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            }
+
+            .btn-hover:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            }
+
+            .btn-active {
+                transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+
+            .btn-active:active {
+                transform: scale(0.96);
+                box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .progress-animation {
+                transition: width 0.5s ease-in-out;
+            }
+
+            .card-shadow {
+                box-shadow: 0 14px 28px rgba(0, 0, 0, 0.05), 0 10px 10px rgba(0, 0, 0, 0.03);
+            }
+
+            .firework {
+                position: absolute;
+                border-radius: 50%;
+                transform: scale(0);
+                opacity: 0;
+                animation: firework 2s ease-out forwards;
+            }
+
+            @keyframes firework {
+                0% {
+                    transform: scale(0);
+                    opacity: 1;
+                }
+
+                50% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+
+                100% {
+                    transform: scale(1.5);
+                    opacity: 0;
+                }
+            }
+
+            .text-shadow {
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            .result-card {
+                background: linear-gradient(135deg, #FF9AA2 0%, #B5EAD7 100%);
+            }
+
+            .touch-target {
+                min-height: 48px;
+                min-width: 48px;
+            }
+
+            .mbti-bar {
+                height: 2rem;
+                border-radius: 9999px;
+                overflow: hidden;
+                background-color: rgba(255, 255, 255, 0.3);
+            }
+
+            .mbti-bar-fill {
+                height: 100%;
+                transition: width 1s ease-in-out;
+            }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center justify-between bg-gradient-to-br from-background to-neutral p-4 font-body">
+    <!-- 内容容器 - 居中显示 -->
+    <div class="flex-1 w-full max-w-md mx-auto flex flex-col items-center justify-center">
+        <!-- 进度条容器 -->
+        <div id="progress-container" class="w-full mb-6 transition-all duration-500 hidden">
+            <div class="text-center text-sm font-medium text-gray-700 mb-1">
+                <span id="progress-text">1/10</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div id="progress-bar" class="bg-primary h-2.5 rounded-full progress-animation" style="width: 10%"></div>
+            </div>
+        </div>
+
+        <!-- 测试卡片容器 -->
+        <div id="test-container" class="w-full flex flex-col items-center">
+            <!-- 测试标题卡片 -->
+            <div id="title-card" class="bg-glass rounded-3xl p-6 md:p-8 mb-6 card-shadow w-full">
+                <h1 class="text-[clamp(1.8rem,5vw,3rem)] font-title text-center text-gray-800 text-shadow mb-6">
+                    MBTI16人格测试
+                </h1>
+                <p class="text-center text-gray-600 mb-8 text-base md:text-lg">
+                    本测试共有10道题，将帮助你了解自己的性格类型。准备好了吗？点击下方按钮开始测试吧！
+                </p>
+                <button id="start-btn" class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 px-8 rounded-full btn-hover btn-active transition-all touch-target">
+                    开始测试
+                </button>
+            </div>
+
+            <!-- 题目卡片容器 -->
+            <div id="questions-container" class="w-full">
+                <!-- 题目卡片将通过JavaScript动态生成 -->
+            </div>
+
+            <!-- 结果卡片 -->
+            <div id="result-card" class="result-card rounded-3xl p-6 md:p-10 shadow-xl w-full hidden">
+                <h2 class="text-[clamp(1.5rem,4vw,2.5rem)] font-title text-center text-white text-shadow mb-6">
+                    你的性格类型是：
+                </h2>
+                <div id="result-type" class="text-[clamp(2rem,6vw,3.5rem)] font-bold text-center text-white mb-8"></div>
+                <!-- 添加图片显示区域 -->
+                <img id="result-image" class="mx-auto mb-8 rounded-2xl shadow-lg" src="" alt="MBTI性格类型图片">
+                <div id="result-description" class="text-white text-center mb-10 text-base md:text-xl"></div>
+                <!-- 图表容器 -->
+                <div class="bg-white/20 rounded-xl p-4 mb-8 backdrop-blur-sm">
+                    <h3 class="text-white text-center mb-6 font-bold">性格维度对比</h3>
+                    <div id="mbti-chart-container" class="space-y-8">
+                        <!-- 性格维度对比图表将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+                <button id="restart-btn" class="w-full bg-white text-primary hover:bg-gray-100 font-bold py-4 px-8 rounded-full btn-hover btn-active transition-all touch-target">
+                    再试一次
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 烟花效果容器 -->
+    <div id="fireworks-container" class="fixed inset-0 pointer-events-none z-0 hidden"></div>
+
+    <!-- 底部信息 - 固定在视口底部 -->
+    <div class="w-full max-w-md mx-auto text-center text-gray-700 text-xs font-body py-4">
+        <p>测试仅供娱乐，非专业心理评估</p>
+        <p class="mt-1">© 2025 MBTI测试平台</p>
+        <p class="mt-1">版本:1.2.11 Made by 陈省安</p>
+    </div>
+
+    <script>
+        // 定义MBTI类型及其描述
+        const mbtiTypes = {
+            "INTJ": "建筑师型人格（INTJ）<br>你是一个富有创造力和战略性思维的人，<br>总是能看到事物的潜在可能性。<br>🌟 你聪明、独立，喜欢深入思考复杂的问题。<br>💡 你有很强的洞察力和决断力，善于规划未来。<br>🚀 你追求完美，对自己和他人都有很高的标准。",
+            "INTP": "逻辑学家型人格（INTP）<br>你是一个理性、好奇且富有创造力的思考者，<br>喜欢探索理论和概念。<br>🧠 你擅长分析问题，寻找逻辑漏洞和解决方案。<br>🎯 你独立自主，不喜欢受约束，喜欢按照自己的节奏工作。<br>🌌 你对知识有着无尽的渴望，总是在学习新的东西。",
+            "ENTJ": "指挥官型人格（ENTJ）<br>你是一个自信、果断且有领导力的人，<br>喜欢掌控局面并推动事情发展。<br>👑 你有很强的组织能力和决策力，善于制定计划和目标。<br>💼 你追求效率和成果，不喜欢浪费时间在无关紧要的事情上。<br>🌟 你有远见卓识，能够看到大局并引领团队走向成功。",
+            "ENTP": "辩论家型人格（ENTP）<br>你是一个聪明、机智且富有创意的人，<br>喜欢挑战传统观念和权威。<br>💬 你擅长辩论和说服他人，总能找到新颖的观点和解决方案。<br>🎭 你好奇心强，对各种事物都有兴趣，喜欢探索新领域。<br>🚀 你适应性强，能够快速应对变化和挑战。",
+            "INFJ": "提倡者型人格（INFJ）<br>你是一个富有洞察力、同情心和创造力的人，<br>总是能理解他人的情感和需求。<br>🌈 你有很强的直觉和同理心，善于感知他人的内心世界。<br>🌟 你追求和谐与意义，喜欢帮助他人实现自我价值。<br>💫 你有自己独特的价值观和信仰，并且坚定不移地追求它们。",
+            "INFP": "调停者型人格（INFP）<br>你是一个理想主义、富有同情心且敏感的人，<br>总是关注他人的情感和需求。<br>🌸 你有丰富的内心世界和想象力，喜欢创造和表达自己。<br>💖 你追求和谐与美好，对不公正和苦难感到敏感。<br>🌟 你有很强的道德感和价值观，并且愿意为了理想而奋斗。",
+            "ENFJ": "主人公型人格（ENFJ）<br>你是一个热情、有领导力且善于社交的人，<br>总是能激励和影响他人。<br>🌟 你有很强的人际交往能力和同理心，善于理解和满足他人的需求。<br>💼 你有远大的理想和目标，并且能够带领团队一起实现它们。<br>🌈 你追求和谐与合作，喜欢营造积极向上的氛围。",
+            "ENFP": "竞选者型人格（ENFP）<br>你是一个热情、充满活力且富有创造力的人，<br>总是能给周围的人带来快乐和灵感。<br>🎡 你有丰富的想象力和创新思维，喜欢探索新的可能性和机会。<br>💖 你热爱社交和与人互动，善于建立和维护人际关系。<br>🌟 你乐观向上，对生活充满热情，总是能看到事情的积极面。",
+            "ISTJ": "物流师型人格（ISTJ）<br>你是一个实际、有序且负责任的人，<br>总是能高效地完成任务和履行职责。<br>📚 你注重细节和事实，喜欢按照规则和程序做事。<br>💼 你有很强的责任心和忠诚度，对工作和家庭都非常认真。<br>🌟 你稳重可靠，是团队中值得信赖的成员。",
+            "ISFJ": "守卫者型人格（ISFJ）<br>你是一个温暖、体贴且富有同情心的人，<br>总是能关注和照顾他人的需求。<br>🌸 你注重细节和传统，喜欢稳定和有序的生活。<br>💖 你有很强的责任心和奉献精神，愿意为他人付出时间和精力。<br>🌟 你是团队中的支持者和守护者，总是能在他人需要时提供帮助。",
+            "ESTJ": "总经理型人格（ESTJ）<br>你是一个务实、果断且有领导力的人，<br>总是能高效地组织和管理事务。<br>👔 你注重事实和逻辑，喜欢按照计划和规则做事。<br>💼 你有很强的责任心和决策力，善于制定和执行计划。<br>🌟 你是团队中的领导者和组织者，能够带领团队实现目标。",
+            "ESFJ": "执政官型人格（ESFJ）<br>你是一个热情、友好且善于社交的人，<br>总是能营造和谐的氛围和建立良好的人际关系。<br>🌈 你注重他人的感受和需求，喜欢帮助他人解决问题。<br>💖 你有很强的组织能力和团队合作精神，善于协调和沟通。<br>🌟 你是团队中的粘合剂，能够促进团队成员之间的合作和团结。",
+            "ISTP": "鉴赏家型人格（ISTP）<br>你是一个实际、灵活且善于解决问题的人，<br>总是能快速应对各种挑战和变化。<br>🔧 你注重实践和动手能力，喜欢探索和尝试新的事物。<br>💡 你有很强的观察力和分析能力，能够快速找到问题的关键所在。<br>🌟 你独立自主，喜欢按照自己的方式做事，不喜欢受约束。",
+            "ISFP": "探险家型人格（ISFP）<br>你是一个温和、敏感且富有艺术气息的人，<br>总是能欣赏和创造美好的事物。<br>🎨 你注重个人感受和体验，喜欢自由和独立的生活。<br>💖 你有很强的创造力和审美能力，善于表达自己的情感和想法。<br>🌟 你是一个和平主义者，喜欢避免冲突和争吵，追求和谐与平衡。",
+            "ESTP": "企业家型人格（ESTP）<br>你是一个外向、果断且善于社交的人，<br>总是能在各种场合中自如应对并取得成功。<br>💼 你注重实际和结果，喜欢挑战和冒险。<br>🎭 你有很强的应变能力和决策力，能够快速做出判断和行动。<br>🌟 你是一个天生的领导者和创业者，喜欢掌控局面并推动事情发展。",
+            "ESFP": "表演者型人格（ESFP）<br>你是一个热情、活泼且善于社交的人，<br>总是能给周围的人带来快乐和活力。<br>🎪 你注重当下的体验和感受，喜欢享受生活和与人互动。<br>💃 你有很强的表现力和感染力，善于吸引他人的注意力和关注。<br>🌟 你是一个乐观主义者，对生活充满热情，总是能看到事情的积极面。"
+        };
+
+        // 定义10道示例题目（原代码中有200道，这里只保留10道作为示例）
+        const questions = [
+            // --------------------------- 示例题目（10道） ---------------------------
+            {
+                text: "请选择更适合你的描述：",
+                options: [
+                    { text: "A. 注重隐私", type: "I" },
+                    { text: "B. 坦率开放", type: "E" }
+                ]
+            },
+            {
+                text: "请选择更适合你的描述：",
+                options: [
+                    { text: "A. 预先安排的", type: "J" },
+                    { text: "B. 走一步看一步", type: "P" }
+                ]
+            },
+            {
+                text: "请选择更适合你的描述：",
+                options: [
+                    { text: "A. 喜欢比喻联想", type: "N" },
+                    { text: "B. 喜欢具体描述", type: "S" }
+                ]
+            },
+            {
+                text: "请选择更适合你的描述：",
+                options: [
+                    { text: "A. 迎合他人", type: "F" },
+                    { text: "B. 批评他人", type: "T" }
+                ]
+            },
+            {
+                text: "请选择更适合你的描述：",
+                options: [
+                    { text: "A. 客观公正", type: "T" },
+                    { text: "B. 偏好和睦", type: "F" }
+                ]
+            },
+            {
+                text: "请选择更适合你的描述：",
+                options: [
+                    { text: "A. 关注效益", type: "S" },
+                    { text: "B. 关注意义", type: "N" }
+                ]
+            },
+            {
+                text: "请选择更适合你的描述：",
+                options: [
+                    { text: "A. 易冲动", type: "P" },
+                    { text: "B. 先思考", type: "J" }
+                ]
+            },
+            {
+                text: "请选择更适合你的描述：",
+                options: [
+                    { text: "A. 社交会消耗能量", type: "I" },
+                    { text: "B. 社交会产生能量", type: "E" }
+                ]
+            },
+            {
+                text: "请选择更适合你的描述：",
+                options: [
+                    { text: "A. 有系统的", type: "J" },
+                    { text: "B. 随性而为", type: "P" }
+                ]
+            },
+            {
+                text: "请选择更适合你的描述：",
+                options: [
+                    { text: "A. 关注全貌", type: "N" },
+                    { text: "B. 注重细节", type: "S" }
+                ]
+            }
+            // 其余190道题目已省略...
+        ];
+
+        // 初始化变量
+        let currentQuestionIndex = 0;
+        let answers = {
+            "E": 0, "I": 0,
+            "S": 0, "N": 0,
+            "T": 0, "F": 0,
+            "J": 0, "P": 0
+        };
+
+        // DOM元素
+        const titleCard = document.getElementById('title-card');
+        const questionsContainer = document.getElementById('questions-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const resultCard = document.getElementById('result-card');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const fireworksContainer = document.getElementById('fireworks-container');
+        const progressContainer = document.getElementById('progress-container');
+
+        // 事件监听器
+        startBtn.addEventListener('click', startTest);
+        restartBtn.addEventListener('click', restartTest);
+
+        // 开始测试
+        function startTest() {
+            titleCard.classList.add('hidden');
+            progressContainer.classList.remove('hidden'); // 显示进度条
+            showQuestion(currentQuestionIndex);
+        }
+
+        // 显示问题
+        function showQuestion(index) {
+            if (index >= questions.length) {
+                calculateResult();
+                return;
+            }
+
+            // 更新进度条
+            const progressPercentage = ((index + 1) / questions.length) * 100;
+            progressBar.style.width = `${progressPercentage}%`;
+            progressText.textContent = `${index + 1}/${questions.length}`;
+
+            // 创建问题卡片 - 移除了问题数显示
+            const question = questions[index];
+            const questionCard = document.createElement('div');
+            questionCard.className = 'bg-glass rounded-3xl p-6 md:p-8 mb-6 card-shadow w-full transition-all duration-500';
+            questionCard.innerHTML = `
+                <p class="text-gray-700 mb-8 text-base md:text-lg">${question.text}</p>
+                <div class="space-y-4">
+                    ${question.options.map((option, i) => `
+                        <button class="option-btn w-full bg-white hover:bg-gray-50 text-gray-800 font-bold py-4 px-8 rounded-full text-left btn-hover btn-active transition-all flex items-center" data-type="${option.type}">
+                            <span class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-4">${String.fromCharCode(65 + i)}</span>
+                            ${option.text}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+
+            // 清空问题容器并添加新问题卡片
+            questionsContainer.innerHTML = '';
+            questionsContainer.appendChild(questionCard);
+
+            // 添加选项按钮事件监听器
+            const optionBtns = document.querySelectorAll('.option-btn');
+            optionBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const type = btn.getAttribute('data-type');
+                    answers[type]++;
+                    currentQuestionIndex++;
+                    showQuestion(currentQuestionIndex);
+                });
+            });
+        }
+
+        // 计算结果
+        function calculateResult() {
+            // 计算每个维度的结果
+            const eScore = answers['E'];
+            const iScore = answers['I'];
+            const sScore = answers['S'];
+            const nScore = answers['N'];
+            const tScore = answers['T'];
+            const fScore = answers['F'];
+            const jScore = answers['J'];
+            const pScore = answers['P'];
+
+            // 确定每个维度的类型
+            const eOrI = eScore >= iScore ? 'E' : 'I';
+            const sOrN = sScore >= nScore ? 'S' : 'N';
+            const tOrF = tScore >= fScore ? 'T' : 'F';
+            const jOrP = jScore >= pScore ? 'J' : 'P';
+
+            // 组合成MBTI类型
+            const mbtiType = eOrI + sOrN + tOrF + jOrP;
+
+            // 显示结果
+            showResult(mbtiType);
+            
+            // 显示烟花效果
+            showFireworks();
+        }
+
+        // 显示结果
+        function showResult(mbtiType) {
+            const resultTypeElement = document.getElementById('result-type');
+            const resultDescriptionElement = document.getElementById('result-description');
+            const resultImageElement = document.getElementById('result-image');
+
+            resultTypeElement.innerHTML = mbtiType;
+            resultDescriptionElement.innerHTML = mbtiTypes[mbtiType];
+            // 修改：设置图片的src属性（确保images文件夹中有对应的图片）
+            // 图片在同一文件夹下的images文件夹内，格式为png
+            resultImageElement.src = `images/${mbtiType}.png`; 
+            resultImageElement.alt = `${mbtiType}性格类型图片`;
+            resultImageElement.onerror = function() {
+                // 如果图片加载失败，显示默认图片
+                this.src = `https://picsum.photos/400/300?random=${mbtiType}`;
+                this.alt = `${mbtiType}性格类型默认图片`;
+            };
+
+            // 隐藏题目容器和进度条，显示结果卡片
+            questionsContainer.innerHTML = '';
+            questionsContainer.classList.add('hidden');
+            progressContainer.classList.add('hidden'); // 隐藏进度条
+            resultCard.classList.remove('hidden');
+            
+            // 创建性格维度对比图表
+            createChart();
+        }
+
+        // 创建性格维度对比图表 - 使用两个独立的色块显示比例，左侧暖色系，右侧冷色系
+        function createChart() {
+            const chartContainer = document.getElementById('mbti-chart-container');
+            chartContainer.innerHTML = '';
+            
+            // 计算每个维度的百分比
+            const ePercentage = Math.round((answers['E'] / (answers['E'] + answers['I'])) * 100) || 50;
+            const iPercentage = 100 - ePercentage;
+            const sPercentage = Math.round((answers['S'] / (answers['S'] + answers['N'])) * 100) || 50;
+            const nPercentage = 100 - sPercentage;
+            const tPercentage = Math.round((answers['T'] / (answers['T'] + answers['F'])) * 100) || 50;
+            const fPercentage = 100 - tPercentage;
+            const jPercentage = Math.round((answers['J'] / (answers['J'] + answers['P'])) * 100) || 50;
+            const pPercentage = 100 - jPercentage;
+            
+            // 固定的暖色系和冷色系颜色
+            const warmColors = ['#FF9AA2', '#FFB7B2', '#FFDAC1', '#FF9AA2'];
+            const coolColors = ['#B5EAD7', '#E2F0CB', '#C7CEEA', '#B5EAD7'];
+            
+            // 创建四个独立的横状占比图
+            createDimensionChart(chartContainer, '注意力方向', ePercentage, iPercentage, warmColors[0], coolColors[0], '外倾', '内倾');
+            createDimensionChart(chartContainer, '认知方式', sPercentage, nPercentage, warmColors[1], coolColors[1], '感觉', '直觉');
+            createDimensionChart(chartContainer, '判断方式', tPercentage, fPercentage, warmColors[2], coolColors[2], '思维', '情感');
+            createDimensionChart(chartContainer, '生活方式', jPercentage, pPercentage, warmColors[3], coolColors[3], '判断', '知觉');
+        }
+
+        // 创建单个维度的横状占比图，使用固定的暖色系和冷色系颜色
+        function createDimensionChart(container, title, leftPercentage, rightPercentage, leftColor, rightColor, leftLabel, rightLabel) {
+            const dimensionDiv = document.createElement('div');
+            dimensionDiv.className = 'space-y-4';
+            
+            // 添加标题
+            dimensionDiv.innerHTML = `
+                <div class="text-white font-medium">${title}</div>
+                <div class="flex justify-between text-white text-sm mb-1">
+                    <span class="flex items-center">
+                        <span class="w-3 h-3 rounded-full" style="background-color: ${leftColor}; margin-right: 1px;"></span> ${leftLabel} ${leftPercentage}%
+                    </span>
+                    <span class="flex items-center">
+                        <span class="w-3 h-3 rounded-full" style="background-color: ${rightColor}; margin-right: 1px;"></span> ${rightLabel} ${rightPercentage}%
+                    </span>
+                </div>
+                <div class="mbti-bar flex">
+                    <div class="mbti-bar-fill" style="width: ${leftPercentage}%; background-color: ${leftColor};"></div>
+                    <div class="mbti-bar-fill" style="width: ${rightPercentage}%; background-color: ${rightColor};"></div>
+                </div>
+            `;
+            
+            container.appendChild(dimensionDiv);
+        }
+
+        // 显示烟花效果
+        function showFireworks() {
+            fireworksContainer.classList.remove('hidden');
+            
+            // 创建10个烟花
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    createFirework();
+                }, i * 300);
+            }
+            
+            // 5秒后隐藏烟花容器
+            setTimeout(() => {
+                fireworksContainer.classList.add('hidden');
+                fireworksContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        // 创建单个烟花
+        function createFirework() {
+            const firework = document.createElement('div');
+            firework.className = 'firework';
+            
+            // 随机位置和颜色
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const size = Math.random() * 100 + 50;
+            const colors = ['#FF9AA2', '#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            firework.style.left = `${x}%`;
+            firework.style.top = `${y}%`;
+            firework.style.width = `${size}px`;
+            firework.style.height = `${size}px`;
+            firework.style.backgroundColor = color;
+            
+            fireworksContainer.appendChild(firework);
+            
+            // 动画结束后移除元素
+            setTimeout(() => {
+                firework.remove();
+            }, 2000);
+        }
+
+        // 重新开始测试
+        function restartTest() {
+            // 重置变量
+            currentQuestionIndex = 0;
+            answers = {
+                "E": 0, "I": 0,
+                "S": 0, "N": 0,
+                "T": 0, "F": 0,
+                "J": 0, "P": 0
+            };
+            
+            // 隐藏结果卡片，显示标题卡片
+            resultCard.classList.add('hidden');
+            titleCard.classList.remove('hidden');
+            questionsContainer.classList.remove('hidden');
+            progressContainer.classList.add('hidden'); // 确保进度条初始是隐藏的
+            
+            // 重置进度条
+            progressBar.style.width = '0%';
+            progressText.textContent = `1/${questions.length}`;
+            
+            // 清空问题容器
+            questionsContainer.innerHTML = '';
+            
+            // 移除烟花容器内容
+            fireworksContainer.innerHTML = '';
+        }
+    </script>
+</body>
+
+</html>    
