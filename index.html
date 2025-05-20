@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBTI性格测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF9AA2',
+                        secondary: '#FFB7B2',
+                        tertiary: '#FFDAC1',
+                        accent: '#E2F0CB',
+                        neutral: '#B5EAD7',
+                        background: '#C7CEEA',
+                    },
+                    fontFamily: {
+                        title: ['"Comic Sans MS"', '"华文彩云"', 'cursive'],
+                        body: ['"微软雅黑"', '"幼圆"', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .bg-glass {
+                background: rgba(255, 255, 255, 0.7);
+                backdrop-filter: blur(10px);
+            }
+            .btn-hover {
+                transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            }
+            .btn-hover:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            }
+            .btn-active {
+                transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .btn-active:active {
+                transform: scale(0.96);
+                box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+            }
+            .progress-animation {
+                transition: width 0.5s ease-in-out;
+            }
+            .card-shadow {
+                box-shadow: 0 14px 28px rgba(0, 0, 0, 0.05), 0 10px 10px rgba(0, 0, 0, 0.03);
+            }
+            .firework {
+                position: absolute;
+                border-radius: 50%;
+                transform: scale(0);
+                opacity: 0;
+                animation: firework 2s ease-out forwards;
+            }
+            @keyframes firework {
+                0% {
+                    transform: scale(0);
+                    opacity: 1;
+                }
+                50% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+                100% {
+                    transform: scale(1.5);
+                    opacity: 0;
+                }
+            }
+            .text-shadow {
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .result-card {
+                background: linear-gradient(135deg, #FF9AA2 0%, #B5EAD7 100%);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-background to-neutral min-h-screen flex flex-col items-center justify-center p-4 font-body">
+    <!-- 进度条容器 -->
+    <div id="progress-container" class="w-full max-w-md mb-6 transition-all duration-500">
+        <div class="text-center text-sm font-medium text-gray-700 mb-1">
+            <span id="progress-text">1/93</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div id="progress-bar" class="bg-primary h-2.5 rounded-full progress-animation" style="width: 1.08%"></div>
+        </div>
+    </div>
+
+    <!-- 测试卡片容器 -->
+    <div id="test-container" class="w-full max-w-md flex flex-col items-center">
+        <!-- 测试标题卡片 -->
+        <div id="title-card" class="bg-glass rounded-2xl p-6 mb-6 card-shadow w-full">
+            <h1 class="text-[clamp(1.8rem,5vw,2.5rem)] font-title text-center text-gray-800 text-shadow mb-4">MBTI性格测试</h1>
+            <p class="text-center text-gray-600 mb-6">本测试共有93道题，将帮助你了解自己的性格类型。每道题请选择最符合你情况的选项，选择后自动进入下一题。</p>
+            <button id="start-btn" class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 px-6 rounded-full btn-hover btn-active transition-all">
+                开始测试
+            </button>
+        </div>
+
+        <!-- 题目卡片容器 -->
+        <div id="questions-container" class="w-full">
+            <!-- 题目卡片将通过JavaScript动态生成 -->
+        </div>
+
+        <!-- 结果卡片 -->
+        <div id="result-card" class="result-card rounded-2xl p-8 shadow-xl w-full hidden">
+            <h2 class="text-[clamp(1.5rem,4vw,2rem)] font-title text-center text-white text-shadow mb-4">你的性格类型是：</h2>
+            <div id="result-type" class="text-[clamp(2rem,6vw,3rem)] font-bold text-center text-white mb-6"></div>
+            <div id="result-description" class="text-white text-center mb-8 text-lg"></div>
+            <button id="restart-btn" class="w-full bg-white text-primary hover:bg-gray-100 font-bold py-3 px-6 rounded-full btn-hover btn-active transition-all">
+                再试一次
+            </button>
+        </div>
+    </div>
+
+    <!-- 烟花效果容器 -->
+    <div id="fireworks-container" class="fixed inset-0 pointer-events-none z-0 hidden"></div>
+
+    <script>
+        // 定义93道不重复的题目数据
+        const questions = [
+            {
+                text: "当你参加一个社交聚会时，你通常会：",
+                options: [
+                    { text: "A. 积极参与各种活动和交流，结识新朋友", type: "E" },
+                    { text: "B. 倾向于和几个熟悉的朋友深入交流", type: "I" }
+                ]
+            },
+            {
+                text: "在做决策时，你更看重：",
+                options: [
+                    { text: "A. 逻辑和理性分析", type: "T" },
+                    { text: "B. 他人的感受和需求", type: "F" }
+                ]
+            },
+            {
+                text: "面对新的计划或安排，你更喜欢：",
+                options: [
+                    { text: "A. 提前详细规划和准备", type: "J" },
+                    { text: "B. 保持灵活性，随机应变", type: "P" }
+                ]
+            },
+            {
+                text: "当你需要放松时，你更可能：",
+                options: [
+                    { text: "A. 独自安静地读书或思考", type: "I" },
+                    { text: "B. 和朋友一起参加热闹的活动", type: "E" }
+                ]
+            },
+            {
+                text: "在团队合作中，你更倾向于：",
+                options: [
+                    { text: "A. 关注整体目标和策略", type: "N" },
+                    { text: "B. 关注具体细节和实际执行", type: "S" }
+                ]
+            },
+            {
+                text: "当你遇到问题时，你通常会：",
+                options: [
+                    { text: "A. 立即开始寻找解决方案", type: "J" },
+                    { text: "B. 先思考问题的根源和可能的影响", type: "P" }
+                ]
+            },
+            {
+                text: "你更倾向于通过哪种方式学习新事物：",
+                options: [
+                    { text: "A. 实际操作和尝试", type: "S" },
+                    { text: "B. 阅读和思考理论", type: "N" }
+                ]
+            },
+            {
+                text: "在社交场合中，你通常：",
+                options: [
+                    { text: "A. 主动发起话题和交流", type: "E" },
+                    { text: "B. 等待别人主动和你交流", type: "I" }
+                ]
+            },
+            {
+                text: "当你必须做出一个选择时，你更看重：",
+                options: [
+                    { text: "A. 符合逻辑和合理性", type: "T" },
+                    { text: "B. 符合你的价值观和情感", type: "F" }
+                ]
+            },
+            {
+                text: "你更喜欢哪种类型的工作环境：",
+                options: [
+                    { text: "A. 结构化和有明确规则的", type: "J" },
+                    { text: "B. 灵活和开放的", type: "P" }
+                ]
+            },
+            {
+                text: "当你回忆过去的经历时，你更可能：",
+                options: [
+                    { text: "A. 记住具体的细节和事实", type: "S" },
+                    { text: "B. 记住整体的感觉和印象", type: "N" }
+                ]
+            },
+            {
+                text: "你通常如何处理压力：",
+                options: [
+                    { text: "A. 制定详细的计划来应对", type: "J" },
+                    { text: "B. 顺其自然，相信自己能应对", type: "P" }
+                ]
+            },
+            {
+                text: "在团队中，你更倾向于扮演：",
+                options: [
+                    { text: "A. 领导者和决策者", type: "E" },
+                    { text: "B. 支持者和协调者", type: "I" }
+                ]
+            },
+            {
+                text: "当你有一个新想法时，你更可能：",
+                options: [
+                    { text: "A. 立即与他人分享和讨论", type: "E" },
+                    { text: "B. 先自己思考和完善", type: "I" }
+                ]
+            },
+            {
+                text: "你更关注：",
+                options: [
+                    { text: "A. 现实和当前的情况", type: "S" },
+                    { text: "B. 未来的可能性和潜力", type: "N" }
+                ]
+            },
+            {
+                text: "在做决定时，你更倾向于：",
+                options: [
+                    { text: "A. 客观分析和权衡利弊", type: "T" },
+                    { text: "B. 考虑他人的感受和需求", type: "F" }
+                ]
+            },
+            {
+                text: "你更喜欢哪种类型的休闲活动：",
+                options: [
+                    { text: "A. 参加社交聚会或团体活动", type: "E" },
+                    { text: "B. 独自进行阅读、绘画等活动", type: "I" }
+                ]
+            },
+            {
+                text: "当你面对一个复杂的问题时，你通常会：",
+                options: [
+                    { text: "A. 一步一步地分析和解决", type: "S" },
+                    { text: "B. 从整体上把握问题，寻找创造性的解决方案", type: "N" }
+                ]
+            },
+            {
+                text: "你更倾向于：",
+                options: [
+                    { text: "A. 按照计划和时间表行事", type: "J" },
+                    { text: "B. 灵活应对，根据情况调整计划", type: "P" }
+                ]
+            },
+            {
+                text: "在评价他人时，你更看重：",
+                options: [
+                    { text: "A. 他们的能力和成就", type: "T" },
+                    { text: "B. 他们的性格和价值观", type: "F" }
+                ]
+            },
+            {
+                text: "当你需要做一个重要的决定时，你通常会：",
+                options: [
+                    { text: "A. 自己思考并做出决定", type: "T" },
+                    { text: "B. 征求他人的意见和建议", type: "F" }
+                ]
+            },
+            {
+                text: "你更喜欢学习：",
+                options: [
+                    { text: "A. 具体的事实和数据", type: "S" },
+                    { text: "B. 抽象的理论和概念", type: "N" }
+                ]
+            },
+            {
+                text: "在社交场合中，你更倾向于：",
+                options: [
+                    { text: "A. 成为焦点，吸引他人的注意", type: "E" },
+                    { text: "B. 保持低调，不引人注目", type: "I" }
+                ]
+            },
+            {
+                text: "当你面对变化时，你通常会：",
+                options: [
+                    { text: "A. 适应得比较快，喜欢新的体验", type: "P" },
+                    { text: "B. 需要时间来调整，更喜欢稳定", type: "J" }
+                ]
+            },
+            {
+                text: "你更看重：",
+                options: [
+                    { text: "A. 效率和结果", type: "T" },
+                    { text: "B. 过程和人际关系", type: "F" }
+                ]
+            },
+            {
+                text: "当你有空闲时间时，你更可能：",
+                options: [
+                    { text: "A. 计划一些有意义的活动", type: "J" },
+                    { text: "B. 放松自己，不做太多计划", type: "P" }
+                ]
+            },
+            {
+                text: "你更倾向于：",
+                options: [
+                    { text: "A. 关注细节和事实", type: "S" },
+                    { text: "B. 关注整体和意义", type: "N" }
+                ]
+            },
+            {
+                text: "在团队合作中，你更看重：",
+                options: [
+                    { text: "A. 明确的分工和责任", type: "J" },
+                    { text: "B. 灵活的合作和创新", type: "P" }
+                ]
+            },
+            {
+                text: "当你遇到困难时，你更可能：",
+                options: [
+                    { text: "A. 独自面对和解决", type: "I" },
+                    { text: "B. 寻求他人的帮助和支持", type: "E" }
+                ]
+            },
+            {
+                text: "你更倾向于通过哪种方式表达自己：",
+                options: [
+                    { text: "A. 直接和明确的语言", type: "T" },
+                    { text: "B. 委婉和含蓄的方式", type: "F" }
+                ]
+            },
+            {
+                text: "当你规划未来时，你更看重：",
+                options: [
+                    { text: "A. 现实的可能性和可行性", type: "S" },
+                    { text: "B. 理想和愿景", type: "N" }
+                ]
+            },
+            {
+                text: "在社交场合中，你通常：",
+                options: [
+                    { text: "A. 主动与很多人交流", type: "E" },
+                    { text: "B. 只与少数熟悉的人深入交流", type: "I" }
+                ]
+            },
+            {
+                text: "当你做决定时，你更倾向于：",
+                options: [
+                    { text: "A. 基于逻辑和分析", type: "T" },
+                    { text: "B. 基于直觉和感觉", type: "F" }
+                ]
+            },
+            {
+                text: "你更喜欢哪种类型的任务：",
+                options: [
+                    { text: "A. 有明确的目标和指导", type: "J" },
+                    { text: "B. 可以自由发挥和创新", type: "P" }
+                ]
+            },
+            {
+                text: "当你学习新技能时，你更倾向于：",
+                options: [
+                    { text: "A. 逐步学习和掌握", type: "S" },
+                    { text: "B. 跳跃式学习，抓住关键要点", type: "N" }
+                ]
+            },
+            {
+                text: "在处理情绪时，你通常：",
+                options: [
+                    { text: "A. 理性分析和控制情绪", type: "T" },
+                    { text: "B. 表达和分享情绪", type: "F" }
+                ]
+            },
+            {
+                text: "你更倾向于：",
+                options: [
+                    { text: "A. 提前安排好一切", type: "J" },
+                    { text: "B. 随遇而安，灵活应对", type: "P" }
+                ]
+            },
+            {
+                text: "当你与他人发生冲突时，你通常会：",
+                options: [
+                    { text: "A. 直接面对并解决问题", type: "T" },
+                    { text: "B. 避免冲突，寻求和谐", type: "F" }
+                ]
+            },
+            {
+                text: "你更关注：",
+                options: [
+                    { text: "A. 实际的应用和效果", type: "S" },
+                    { text: "B. 理论的深度和广度", type: "N" }
+                ]
+            },
+            {
+                text: "在团队中，你更倾向于：",
+                options: [
+                    { text: "A. 提出新的想法和建议", type: "N" },
+                    { text: "B. 执行和完善现有的计划", type: "S" }
+                ]
+            },
+            {
+                text: "当你做决定时，你更看重：",
+                options: [
+                    { text: "A. 事实和数据", type: "T" },
+                    { text: "B. 个人的价值观和信仰", type: "F" }
+                ]
+            },
+            {
+                text: "你更喜欢哪种类型的社交活动：",
+                options: [
+                    { text: "A. 大型聚会和社交场合", type: "E" },
+                    { text: "B. 小型的、亲密的聚会", type: "I" }
+                ]
+            },
+            {
+                text: "当你面对压力时，你更可能：",
+                options: [
+                    { text: "A. 变得更加专注和高效", type: "J" },
+                    { text: "B. 感到焦虑和不知所措", type: "P" }
+                ]
+            },
+            {
+                text: "你更倾向于：",
+                options: [
+                    { text: "A. 关注现在和过去", type: "S" },
+                    { text: "B. 关注未来和可能性", type: "N" }
+                ]
+            },
+            {
+                text: "在团队合作中，你更看重：",
+                options: [
+                    { text: "A. 达成目标和取得成果", type: "T" },
+                    { text: "B. 团队成员之间的和谐关系", type: "F" }
+                ]
+            },
+            {
+                text: "当你有一个目标时，你通常会：",
+                options: [
+                    { text: "A. 制定详细的计划并严格执行", type: "J" },
+                    { text: "B. 有一个大致的方向，灵活调整", type: "P" }
+                ]
+            },
+            {
+                text: "你更倾向于通过哪种方式获取信息：",
+                options: [
+                    { text: "A. 直接观察和体验", type: "S" },
+                    { text: "B. 思考和分析", type: "N" }
+                ]
+            },
+            {
+                text: "在社交场合中，你更倾向于：",
+                options: [
+                    { text: "A. 主动参与各种活动", type: "E" },
+                    { text: "B. 观察和倾听他人", type: "I" }
+                ]
+            },
+            {
+                text: "当你做决定时，你更倾向于：",
+                options: [
+                    { text: "A. 果断和坚定", type: "J" },
+                    { text: "B. 开放和灵活", type: "P" }
+                ]
+            },
+            {
+                text: "你更看重：",
+                options: [
+                    { text: "A. 效率和实用性", type: "T" },
+                    { text: "B. 美感和艺术性", type: "F" }
+                ]
+            },
+            {
+                text: "当你面对挑战时，你更可能：",
+                options: [
+                    { text: "A. 视为机会并积极应对", type: "E" },
+                    { text: "B. 感到压力并需要时间调整", type: "I" }
+                ]
+            },
+            {
+                text: "你更倾向于：",
+                options: [
+                    { text: "A. 关注具体的细节和事实", type: "S" },
+                    { text: "B. 关注抽象的概念和意义", type: "N" }
+                ]
+            },
+            {
+                text: "在团队中，你更倾向于扮演：",
+                options: [
+                    { text: "A. 组织者和协调者", type: "J" },
+                    { text: "B. 创新者和提出新想法的人", type: "P" }
+                ]
+            },
+            {
+                text: "当你需要放松时，你更可能：",
+                options: [
+                    { text: "A. 做一些体力活动，如运动或散步", type: "E" },
+                    { text: "B. 做一些安静的活动，如阅读或冥想", type: "I" }
+                ]
+            },
+            {
+                text: "你更倾向于通过哪种方式解决问题：",
+                options: [
+                    { text: "A. 逻辑分析和推理", type: "T" },
+                    { text: "B. 直觉和洞察力", type: "F" }
+                ]
+            },
+            {
+                text: "当你规划一天的活动时，你通常会：",
+                options: [
+                    { text: "A. 制定详细的计划并按计划执行", type: "J" },
+                    { text: "B. 只做一些大致的安排，灵活调整", type: "P" }
+                ]
+            },
+            {
+                text: "你更关注：",
+                options: [
+                    { text: "A. 实际的结果和成就", type: "T" },
+                    { text: "B. 过程中的体验和成长", type: "F" }
+                ]
+            },
+            {
+                text: "在社交场合中，你更倾向于：",
+                options: [
+                    { text: "A. 与很多人交流，但关系可能较浅", type: "E" },
+                    { text: "B. 与少数人深入交流，建立深厚关系", type: "I" }
+                ]
+            },
+            {
+                text: "当你面对不确定性时，你通常会：",
+                options: [
+                    { text: "A. 感到不安，希望尽快确定下来", type: "J" },
+                    { text: "B. 接受不确定性，从中寻找机会", type: "P" }
+                ]
+            },
+            {
+                text: "你更倾向于：",
+                options: [
+                    { text: "A. 关注现实和实际情况", type: "S" },
+                    { text: "B. 关注想象和可能性", type: "N" }
+                ]
+            },
+            {
+                text: "在团队合作中，你更看重：",
+                options: [
+                    { text: "A. 明确的目标和方向", type: "J" },
+                    { text: "B. 自由和创新的氛围", type: "P" }
+                ]
+            },
+            {
+                text: "当你学习新东西时，你更倾向于：",
+                options: [
+                    { text: "A. 按照步骤和指导学习", type: "S" },
+                    { text: "B. 自己探索和发现", type: "N" }
+                ]
+            },
+            {
+                text: "在处理冲突时，你更可能：",
+                options: [
+                    { text: "A. 分析问题的根源并找到解决方案", type: "T" },
+                    { text: "B. 关注各方的感受，寻求和谐", type: "F" }
+                ]
+            },
+            {
+                text: "你更倾向于：",
+                options: [
+                    { text: "A. 有计划地使用时间", type: "J" },
+                    { text: "B. 灵活安排时间", type: "P" }
+                ]
+            },
+            {
+                text: "当你有一个想法时，你更可能：",
+                options: [
+                    { text: "A. 立即行动，尝试实现它", type: "J" },
+                    { text: "B. 先思考和完善它", type: "P" }
+                ]
+            },
+            {
+                text: "你更看重：",
+                options: [
+                    { text: "A. 客观的事实和数据", type: "T" },
+                    { text: "B. 主观的感受和体验", type: "F" }
+                ]
+            },
+            {
+                text: "在社交场合中，你更倾向于：",
+                options: [
+                    { text: "A. 成为活动的中心，吸引他人的注意", type: "E" },
+                    { text: "B. 保持低调，享受他人的陪伴", type: "I" }
+                ]
+            },
+            {
+                text: "当你面对压力时，你更可能：",
+                options: [
+                    { text: "A. 变得更加有条理和专注", type: "J" },
+                    { text: "B. 变得更加放松和随意", type: "P" }
+                ]
+            },
+            {
+                text: "你更倾向于：",
+                options: [
+                    { text: "A. 关注具体的细节和事实", type: "S" },
+                    { text: "B. 关注整体的模式和意义", type: "N" }
+                ]
+            },
+            {
+                text: "在团队中，你更倾向于：",
+                options: [
+                    { text: "A. 遵循规则和程序", type: "J" },
+                    { text: "B. 挑战现状，提出新想法", type: "P" }
+                ]
+            },
+            {
+                text: "当你做决定时，你更倾向于：",
+                options: [
+                    { text: "A. 考虑逻辑和理性", type: "T" },
+                    { text: "B. 考虑情感和价值观", type: "F" }
+                ]
+            },
+            {
+                text: "你更喜欢哪种类型的学习环境：",
+                options: [
+                    { text: "A. 结构化和有组织的", type: "J" },
+                    { text: "B. 自由和开放的", type: "P" }
+                ]
+            },
+            {
+                text: "当你面对选择时，你更可能：",
+                options: [
+                    { text: "A. 权衡利弊后迅速做出决定", type: "J" },
+                    { text: "B. 考虑各种可能性，犹豫不决", type: "P" }
+                ]
+            },
+            {
+                text: "你更看重：",
+                options: [
+                    { text: "A. 完成任务和达成目标", type: "J" },
+                    { text: "B. 享受过程和体验", type: "P" }
+                ]
+            }
+        ];
+
+        // 定义MBTI类型及其描述
+        const mbtiTypes = {
+            "INTJ": "建筑师型人格（INTJ）：你是一个富有创造力和战略性思维的人，<br>总是能看到事物的潜在可能性。<br>🌟 你聪明、独立，喜欢深入思考复杂的问题。<br>💡 你有很强的洞察力和决断力，善于规划未来。<br>🚀 你追求完美，对自己和他人都有很高的标准。",
+            "INTP": "逻辑学家型人格（INTP）：你是一个理性、好奇且富有创造力的思考者，<br>喜欢探索理论和概念。<br>🧠 你擅长分析问题，寻找逻辑漏洞和解决方案。<br>🎯 你独立自主，不喜欢受约束，喜欢按照自己的节奏工作。<br>🌌 你对知识有着无尽的渴望，总是在学习新的东西。",
+            "ENTJ": "指挥官型人格（ENTJ）：你是一个自信、果断且有领导力的人，<br>喜欢掌控局面并推动事情发展。<br>👑 你有很强的组织能力和决策力，善于制定计划和目标。<br>💼 你追求效率和成果，不喜欢浪费时间在无关紧要的事情上。<br>🌟 你有远见卓识，能够看到大局并引领团队走向成功。",
+            "ENTP": "辩论家型人格（ENTP）：你是一个聪明、机智且富有创意的人，<br>喜欢挑战传统观念和权威。<br>💬 你擅长辩论和说服他人，总能找到新颖的观点和解决方案。<br>🎭 你好奇心强，对各种事物都有兴趣，喜欢探索新领域。<br>🚀 你适应性强，能够快速应对变化和挑战。",
+            "INFJ": "提倡者型人格（INFJ）：你是一个富有洞察力、同情心和创造力的人，<br>总是能理解他人的情感和需求。<br>🌈 你有很强的直觉和同理心，善于感知他人的内心世界。<br>🌟 你追求和谐与意义，喜欢帮助他人实现自我价值。<br>💫 你有自己独特的价值观和信仰，并且坚定不移地追求它们。",
+            "INFP": "调停者型人格（INFP）：你是一个理想主义、富有同情心且敏感的人，<br>总是关注他人的情感和需求。<br>🌸 你有丰富的内心世界和想象力，喜欢创造和表达自己。<br>💖 你追求和谐与美好，对不公正和苦难感到敏感。<br>🌟 你有很强的道德感和价值观，并且愿意为了理想而奋斗。",
+            "ENFJ": "主人公型人格（ENFJ）：你是一个热情、有领导力且善于社交的人，<br>总是能激励和影响他人。<br>🌟 你有很强的人际交往能力和同理心，善于理解和满足他人的需求。<br>💼 你有远大的理想和目标，并且能够带领团队一起实现它们。<br>🌈 你追求和谐与合作，喜欢营造积极向上的氛围。",
+            "ENFP": "竞选者型人格（ENFP）：你是一个热情、充满活力且富有创造力的人，<br>总是能给周围的人带来快乐和灵感。<br>🎡 你有丰富的想象力和创新思维，喜欢探索新的可能性和机会。<br>💖 你热爱社交和与人互动，善于建立和维护人际关系。<br>🌟 你乐观向上，对生活充满热情，总是能看到事情的积极面。",
+            "ISTJ": "物流师型人格（ISTJ）：你是一个实际、有序且负责任的人，<br>总是能高效地完成任务和履行职责。<br>📚 你注重细节和事实，喜欢按照规则和程序做事。<br>💼 你有很强的责任心和忠诚度，对工作和家庭都非常认真。<br>🌟 你稳重可靠，是团队中值得信赖的成员。",
+            "ISFJ": "守卫者型人格（ISFJ）：你是一个温暖、体贴且富有同情心的人，<br>总是能关注和照顾他人的需求。<br>🌸 你注重细节和传统，喜欢稳定和有序的生活。<br>💖 你有很强的责任心和奉献精神，愿意为他人付出时间和精力。<br>🌟 你是团队中的支持者和守护者，总是能在他人需要时提供帮助。",
+            "ESTJ": "总经理型人格（ESTJ）：你是一个务实、果断且有领导力的人，<br>总是能高效地组织和管理事务。<br>👔 你注重事实和逻辑，喜欢按照计划和规则做事。<br>💼 你有很强的责任心和决策力，善于制定和执行计划。<br>🌟 你是团队中的领导者和组织者，能够带领团队实现目标。",
+            "ESFJ": "执政官型人格（ESFJ）：你是一个热情、友好且善于社交的人，<br>总是能营造和谐的氛围和建立良好的人际关系。<br>🌈 你注重他人的感受和需求，喜欢帮助他人解决问题。<br>💖 你有很强的组织能力和团队合作精神，善于协调和沟通。<br>🌟 你是团队中的粘合剂，能够促进团队成员之间的合作和团结。",
+            "ISTP": "鉴赏家型人格（ISTP）：你是一个实际、灵活且善于解决问题的人，<br>总是能快速应对各种挑战和变化。<br>🔧 你注重实践和动手能力，喜欢探索和尝试新的事物。<br>💡 你有很强的观察力和分析能力，能够快速找到问题的关键所在。<br>🌟 你独立自主，喜欢按照自己的方式做事，不喜欢受约束。",
+            "ISFP": "探险家型人格（ISFP）：你是一个温和、敏感且富有艺术气息的人，<br>总是能欣赏和创造美好的事物。<br>🎨 你注重个人感受和体验，喜欢自由和独立的生活。<br>💖 你有很强的创造力和审美能力，善于表达自己的情感和想法。<br>🌟 你是一个和平主义者，喜欢避免冲突和争吵，追求和谐与平衡。",
+            "ESTP": "企业家型人格（ESTP）：你是一个外向、果断且善于社交的人，<br>总是能在各种场合中自如应对并取得成功。<br>💼 你注重实际和结果，喜欢挑战和冒险。<br>🎭 你有很强的应变能力和决策力，能够快速做出判断和行动。<br>🌟 你是一个天生的领导者和创业者，喜欢掌控局面并推动事情发展。",
+            "ESFP": "表演者型人格（ESFP）：你是一个热情、活泼且善于社交的人，<br>总是能给周围的人带来快乐和活力。<br>🎪 你注重当下的体验和感受，喜欢享受生活和与人互动。<br>💃 你有很强的表现力和感染力，善于吸引他人的注意力和关注。<br>🌟 你是一个乐观主义者，对生活充满热情，总是能看到事情的积极面。"
+        };
+
+        // 初始化应用状态
+        const state = {
+            currentQuestion: 0,
+            answers: Array(questions.length).fill(null),
+            typeCounts: {
+                E: 0, I: 0,
+                S: 0, N: 0,
+                T: 0, F: 0,
+                J: 0, P: 0
+            }
+        };
+
+        // DOM元素
+        const titleCard = document.getElementById('title-card');
+        const questionsContainer = document.getElementById('questions-container');
+        const resultCard = document.getElementById('result-card');
+        const resultType = document.getElementById('result-type');
+        const resultDescription = document.getElementById('result-description');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const progressContainer = document.getElementById('progress-container');
+        const fireworksContainer = document.getElementById('fireworks-container');
+
+        // 生成烟花效果
+        function createFirework() {
+            const firework = document.createElement('div');
+            firework.classList.add('firework');
+            
+            // 随机位置
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            
+            // 随机颜色
+            const colors = [
+                'rgba(255, 105, 180, 0.8)', // 粉色
+                'rgba(255, 215, 0, 0.8)',   // 黄色
+                'rgba(135, 206, 250, 0.8)', // 浅蓝色
+                'rgba(128, 0, 128, 0.8)',   // 紫色
+                'rgba(0, 191, 255, 0.8)'    // 深蓝色
+            ];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            // 随机大小
+            const size = Math.random() * 100 + 50;
+            
+            firework.style.left = `${x}%`;
+            firework.style.top = `${y}%`;
+            firework.style.width = `${size}px`;
+            firework.style.height = `${size}px`;
+            firework.style.background = color;
+            
+            // 随机延迟
+            const delay = Math.random() * 3;
+            firework.style.animationDelay = `${delay}s`;
+            
+            fireworksContainer.appendChild(firework);
+            
+            // 动画结束后移除元素
+            setTimeout(() => {
+                firework.remove();
+            }, 3000);
+        }
+
+        // 连续生成烟花
+        function launchFireworks() {
+            fireworksContainer.classList.remove('hidden');
+            fireworksContainer.innerHTML = '';
+            
+            const interval = setInterval(() => {
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(createFirework, i * 200);
+                }
+            }, 1000);
+            
+            // 10秒后停止生成新烟花，但现有烟花会继续播放
+            setTimeout(() => {
+                clearInterval(interval);
+            }, 10000);
+        }
+
+        // 计算MBTI类型
+        function calculateMBTIType() {
+            let type = '';
+            
+            // 计算E/I维度
+            type += state.typeCounts.E >= state.typeCounts.I ? 'E' : 'I';
+            
+            // 计算S/N维度
+            type += state.typeCounts.S >= state.typeCounts.N ? 'S' : 'N';
+            
+            // 计算T/F维度
+            type += state.typeCounts.T >= state.typeCounts.F ? 'T' : 'F';
+            
+            // 计算J/P维度
+            type += state.typeCounts.J >= state.typeCounts.P ? 'J' : 'P';
+            
+            return type;
+        }
+
+        // 显示结果
+        function showResult() {
+            const mbtiType = calculateMBTIType();
+            
+            // 更新结果显示
+            resultType.textContent = mbtiType;
+            resultDescription.innerHTML = mbtiTypes[mbtiType];
+            
+            // 隐藏问题容器，显示结果卡片
+            questionsContainer.classList.add('hidden');
+            resultCard.classList.remove('hidden');
+            progressContainer.classList.add('hidden');
+            
+            // 启动烟花效果
+            launchFireworks();
+        }
+
+        // 创建问题卡片
+        function createQuestionCard(index) {
+            if (index >= questions.length) {
+                showResult();
+                return;
+            }
+            
+            const question = questions[index];
+            const card = document.createElement('div');
+            card.id = `question-${index}`;
+            card.className = 'bg-glass rounded-2xl p-6 mb-6 card-shadow w-full transform transition-all duration-500 opacity-0 translate-y-4';
+            
+            // 问题文本
+            const questionText = document.createElement('p');
+            questionText.className = 'text-lg font-medium text-gray-800 mb-6';
+            questionText.textContent = question.text;
+            
+            // 选项容器
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'space-y-3';
+            
+            // 创建选项按钮
+            question.options.forEach((option, optionIndex) => {
+                const button = document.createElement('button');
+                button.className = `w-full text-left bg-white hover:bg-gray-50 text-gray-800 font-medium py-3 px-6 rounded-xl shadow-md btn-hover btn-active transition-all flex items-center`;
+                
+                // 选项字母
+                const optionLetter = document.createElement('span');
+                optionLetter.className = 'w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center mr-3 font-bold';
+                optionLetter.textContent = option.text.charAt(0);
+                
+                // 选项文本
+                const optionContent = document.createElement('span');
+                optionContent.textContent = option.text.substring(3);
+                
+                button.appendChild(optionLetter);
+                button.appendChild(optionContent);
+                
+                // 添加点击事件
+                button.addEventListener('click', () => {
+                    // 记录答案
+                    state.answers[index] = option.type;
+                    
+                    // 更新类型计数
+                    state.typeCounts[option.type]++;
+                    
+                    // 更新进度
+                    const progress = ((index + 1) / questions.length) * 100;
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `${index + 1}/${questions.length}`;
+                    
+                    // 隐藏当前问题卡片
+                    card.classList.add('opacity-0', 'translate-y-4');
+                    
+                    // 显示下一个问题或结果
+                    setTimeout(() => {
+                        card.remove();
+                        createQuestionCard(index + 1);
+                    }, 300);
+                });
+                
+                optionsContainer.appendChild(button);
+            });
+            
+            card.appendChild(questionText);
+            card.appendChild(optionsContainer);
+            questionsContainer.appendChild(card);
+            
+            // 淡入动画
+            setTimeout(() => {
+                card.classList.remove('opacity-0', 'translate-y-4');
+            }, 100);
+        }
+
+        // 重置测试
+        function resetTest() {
+            // 重置状态
+            state.currentQuestion = 0;
+            state.answers = Array(questions.length).fill(null);
+            state.typeCounts = {
+                E: 0, I: 0,
+                S: 0, N: 0,
+                T: 0, F: 0,
+                J: 0, P: 0
+            };
+            
+            // 隐藏结果卡片，显示进度条
+            resultCard.classList.add('hidden');
+            progressContainer.classList.remove('hidden');
+            fireworksContainer.classList.add('hidden');
+            
+            // 清空问题容器并创建第一个问题
+            questionsContainer.innerHTML = '';
+            createQuestionCard(0);
+        }
+
+        // 开始测试
+        startBtn.addEventListener('click', () => {
+            titleCard.classList.add('opacity-0', 'scale-95');
+            
+            setTimeout(() => {
+                titleCard.classList.add('hidden');
+                createQuestionCard(0);
+            }, 300);
+        });
+
+        // 重新开始测试
+        restartBtn.addEventListener('click', resetTest);
+    </script>
+</body>
+</html>
+    
