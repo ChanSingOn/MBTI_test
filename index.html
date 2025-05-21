@@ -1736,7 +1736,7 @@
             resultDescriptionElement.innerHTML = mbtiTypes[mbtiType];
             // 修改：设置图片的src属性（确保images文件夹中有对应的图片）
             // 图片在同一文件夹下的images文件夹内，格式为png
-            resultImageElement.src = `https://raw.githubusercontent.com/ChanSingOn/MBTI_test/main/images/${mbtiType}.png`; 
+            resultImageElement.src = `https://raw.githubusercontent.com/ChanSingOn/MBTI_test/refs/heads/main/images/%E2%80%8C${mbtiType}.png`; 
             resultImageElement.alt = `${mbtiType}性格类型图片`;
             resultImageElement.onerror = function() {
                 // 如果图片加载失败，显示默认图片
